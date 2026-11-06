@@ -79,3 +79,29 @@ export async function getDashboardData() {
     upcoming,
   };
 }
+
+export type EnrichedRow = ReturnType<typeof enrichLeads>["leads"][number];
+
+export type LeadFilters = {
+  q?: string;
+  stage?: string;
+  industry?: string;
+  overdue?: boolean;
+  issues?: boolean;
+};
+
+// One filter used by both the Leads page and /api/leads.
+export function filterLeads(leads: EnrichedRow[], f: LeadFilters): EnrichedRow[] {
+  const q = f.q?.trim().toLowerCase();
+  return leads.filter((l) => {
+    if (f.stage && l.stage !== f.stage) return false;
+    if (f.industry && l.industry !== f.industry) return false;
+    if (f.overdue && !l.isOverdue) return false;
+    if (f.issues && l.issues.length === 0) return false;
+    if (q) {
+      const hay = `${l.leadId} ${l.company} ${l.contact.name ?? ""} ${l.contact.email ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
