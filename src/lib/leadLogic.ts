@@ -11,6 +11,7 @@ export type LeadLike = {
   leadId: string;
   company: string;
   industry?: string | null;
+    source?: string | null;
   contact: {
     name?: string | null;
     role?: string | null;
