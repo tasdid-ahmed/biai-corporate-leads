@@ -193,3 +193,5 @@ export function analyze(leads: LeadLike[], ref: string = REFERENCE_DATE) {
   const overdueIds = leads.filter((l) => isOverdue(l, ref)).map((l) => l.leadId);
   return { duplicates, issuesByLead, overdueIds };
 }
+
+export type EnrichedLead = LeadLike & { isOverdue: boolean; issues: Issue[]; recommendedAction: string | null };
