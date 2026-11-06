@@ -11,6 +11,7 @@
     "check:logic": "tsx --env-file=.env scripts/check-logic.ts"
   },
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "lucide-react": "^1.68.0",
     "mongodb": "^7.8.0",
     "mongoose": "^9.11.4",
