@@ -1,6 +1,6 @@
 import { connectDB } from "./mongodb";
 import { Lead } from "../models/Lead";
-import { analyze, recommendedAction, type LeadLike } from "./leadLogic";
+import { analyze, recommendedAction, totalsByStage, REFERENCE_DATE, type LeadLike } from "./leadLogic";
 
 export async function getAllLeads(): Promise<LeadLike[]> {
   await connectDB();
@@ -36,5 +36,46 @@ export function enrichLeads(leads: LeadLike[]) {
       issues: issuesByLead[l.leadId],
       recommendedAction: recommendedAction(l),
     })),
+  };
+}
+
+// Shared by the dashboard page and /api/dashboard so both always agree.
+export async function getDashboardData() {
+  const raw = await getAllLeads();
+  const { leads, duplicates } = enrichLeads(raw);
+
+  const issueCounts: Record<string, number> = {};
+  for (const l of leads) for (const i of l.issues) issueCounts[i.type] = (issueCounts[i.type] ?? 0) + 1;
+
+  const overdue = leads
+    .filter((l) => l.isOverdue)
+    .sort((a, b) => a.nextFollowUp!.localeCompare(b.nextFollowUp!))
+    .map((l) => ({
+      leadId: l.leadId,
+      company: l.company,
+      stage: l.stage,
+      dealValueBDT: l.dealValueBDT,
+      nextFollowUp: l.nextFollowUp,
+      advice: l.recommendedAction,
+    }));
+
+  const upcoming = leads
+    .filter((l) => !["Paid", "Lost"].includes(l.stage) && l.nextFollowUp && l.nextFollowUp >= REFERENCE_DATE)
+    .sort((a, b) => a.nextFollowUp!.localeCompare(b.nextFollowUp!))
+    .slice(0, 6)
+    .map((l) => ({ leadId: l.leadId, company: l.company, stage: l.stage, nextFollowUp: l.nextFollowUp }));
+
+  return {
+    referenceDate: REFERENCE_DATE,
+    totalLeads: leads.length,
+    totalDealValueBDT: raw.reduce((s, l) => s + l.dealValueBDT, 0),
+    overdueCount: overdue.length,
+    overdueIds: overdue.map((o) => o.leadId),
+    overdue,
+    leadsWithIssues: leads.filter((l) => l.issues.length > 0).length,
+    issueCounts,
+    duplicates,
+    stageTotals: totalsByStage(raw),
+    upcoming,
   };
 }
